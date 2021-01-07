@@ -418,15 +418,14 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 
 no_fences:
 	info.num_fences = num_fences;
-<<<<<<< HEAD
 
 	if (copy_to_user((void __user *)arg, &info.status, len))
 		return -EFAULT;
 
-=======
+
 	if (copy_to_user((void __user *)arg, &info.status, len))
 		return -EFAULT;
->>>>>>> c1de685596ab (dma-buf/sync_file: Speed up ioctl by omitting debug names)
+
 	return 0;
 }
 
