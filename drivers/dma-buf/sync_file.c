@@ -177,7 +177,8 @@ static void add_fence(struct dma_fence **fences,
  * @a and @b.  @a and @b remain valid, independent sync_file. Returns the
  * new merged sync_file or NULL in case of error.
  */
-static struct sync_file *sync_file_merge(struct sync_file *a, struct sync_file *b)
+static struct sync_file *sync_file_merge(struct sync_file *a,
+					 struct sync_file *b)
 {
 	struct sync_file *sync_file;
 	struct dma_fence **fences = NULL, **nfences, **a_fences, **b_fences;
@@ -417,10 +418,15 @@ static long sync_file_ioctl_fence_info(struct sync_file *sync_file,
 
 no_fences:
 	info.num_fences = num_fences;
+<<<<<<< HEAD
 
 	if (copy_to_user((void __user *)arg, &info.status, len))
 		return -EFAULT;
 
+=======
+	if (copy_to_user((void __user *)arg, &info.status, len))
+		return -EFAULT;
+>>>>>>> c1de685596ab (dma-buf/sync_file: Speed up ioctl by omitting debug names)
 	return 0;
 }
 
