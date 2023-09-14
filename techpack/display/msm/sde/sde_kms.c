@@ -59,9 +59,6 @@
 #include "soc/qcom/secure_buffer.h"
 #include <linux/qtee_shmbridge.h>
 #include <linux/haven/hh_irq_lend.h>
-#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(OPLUS_FEATURE_PXLW_IRISSOFT)
-#include "iris/dsi_iris5_api.h"
-#endif
 
 #define CREATE_TRACE_POINTS
 #include "sde_trace.h"
@@ -71,7 +68,7 @@
 #endif
 
 #ifdef OPLUS_BUG_STABILITY
-#include "oplus_adfr.h"
+#include "oplus_dc_diming.h"
 #endif
 
 /* defines for secure channel call */
@@ -1164,9 +1161,6 @@ static void sde_kms_prepare_commit(struct msm_kms *kms,
 	rc = pm_runtime_get_sync(sde_kms->dev->dev);
 	if (rc < 0) {
 		SDE_ERROR("failed to enable power resources %d\n", rc);
-#ifdef OPLUS_BUG_STABILITY
-		SDE_MM_ERROR("DisplayDriverID@@407$$failed to enable power resources %d\n", rc);
-#endif /* OPLUS_BUG_STABILITY */
 		SDE_EVT32(rc, SDE_EVTLOG_ERROR);
 		goto end;
 	}
@@ -1273,16 +1267,6 @@ static void _sde_kms_release_splash_resource(struct sde_kms *sde_kms,
 
 	SDE_EVT32(DRMID(crtc), crtc->state->active,
 			sde_kms->splash_data.num_splash_displays);
-
-	/*remove all votes if eDP displays are done with splash*/
-	if (dp_display_get_num_of_boot_displays()) {
-		for (i = 0; i < SDE_POWER_HANDLE_DBUS_ID_MAX; i++)
-			sde_power_data_bus_set_quota(phandle, i,
-				SDE_POWER_HANDLE_ENABLE_BUS_AB_QUOTA,
-				phandle->ib_quota[i]);
-		pm_runtime_put_sync(sde_kms->dev->dev);
-		sde_kms->splash_data.num_splash_displays--;
-	}
 
 	for (i = 0; i < MAX_DSI_DISPLAYS; i++) {
 		splash_display = &sde_kms->splash_data.splash_display[i];
@@ -1549,25 +1533,11 @@ static void sde_kms_complete_commit(struct msm_kms *kms,
 	for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i)
 		_sde_kms_release_splash_resource(sde_kms, crtc);
 
-#ifdef OPLUS_BUG_STABILITY
-	if (oplus_adfr_is_support()) {
-		if (oplus_adfr_get_vsync_mode() == OPLUS_DOUBLE_TE_VSYNC) {
-			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_source_switch");
-			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
-				sde_kms_adfr_vsync_source_switch(kms, crtc);
-			}
-			SDE_ATRACE_END("sde_kms_adfr_vsync_source_switch");
-		} else if (oplus_adfr_get_vsync_mode() == OPLUS_EXTERNAL_TE_TP_VSYNC) {
-			SDE_ATRACE_BEGIN("sde_kms_adfr_vsync_switch");
-			for_each_old_crtc_in_state(old_state, crtc, old_crtc_state, i) {
-				sde_kms_adfr_vsync_switch(kms, crtc);
-			}
-			SDE_ATRACE_END("sde_kms_adfr_vsync_switch");
-		}
-	}
-#endif
-
 	SDE_EVT32_VERBOSE(SDE_EVTLOG_FUNC_EXIT);
+
+#ifdef OPLUS_BUG_STABILITY
+	oplus_notify_hbm_off();
+#endif
 	SDE_ATRACE_END("sde_kms_complete_commit");
 }
 
@@ -1802,12 +1772,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.install_properties = NULL,
 		.set_allowed_mode_switch = dsi_conn_set_allowed_mode_switch,
 		.get_qsync_min_fps = dsi_display_get_qsync_min_fps,
-#ifdef OPLUS_BUG_STABILITY
-		// enable qsync on/off cmds
-		.prepare_commit = dsi_display_pre_commit,
-#else
 		.prepare_commit = dsi_conn_prepare_commit,
-#endif
 		.get_num_lm_from_mode = dsi_conn_get_lm_from_mode,
 	};
 	static const struct sde_connector_ops wb_ops = {
@@ -1830,7 +1795,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.set_allowed_mode_switch = NULL,
 	};
 	static const struct sde_connector_ops dp_ops = {
-		.set_info_blob = dp_connector_set_info_blob,
 		.post_init  = dp_connector_post_init,
 		.detect     = dp_connector_detect,
 		.get_modes  = dp_connector_get_modes,
@@ -1839,12 +1803,11 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		.get_info   = dp_connector_get_info,
 		.get_mode_info  = dp_connector_get_mode_info,
 		.post_open  = dp_connector_post_open,
-		.set_backlight = dp_connector_set_backlight,
 		.check_status = NULL,
 		.set_colorspace = dp_connector_set_colorspace,
 		.config_hdr = dp_connector_config_hdr,
 		.cmd_transfer = NULL,
-		.cont_splash_config = dp_display_cont_splash_config,
+		.cont_splash_config = NULL,
 		.cont_splash_res_disable = NULL,
 		.get_panel_vfp = NULL,
 		.update_pps = dp_connector_update_pps,
@@ -1981,7 +1944,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 	for (i = 0; i < sde_kms->dp_display_count &&
 			priv->num_encoders < max_encoders; ++i) {
 		int idx;
-		struct dp_display_info dp_info = {0};
 
 		display = sde_kms->dp_displays[i];
 		encoder = NULL;
@@ -1993,13 +1955,6 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 			continue;
 		}
 
-		rc = dp_display_get_info(display, &dp_info);
-		if (rc) {
-			SDE_ERROR("failed to read dp info, %d\n", rc);
-			continue;
-		}
-
-		info.h_tile_instance[0] = dp_info.intf_idx[0];
 		encoder = sde_encoder_init(dev, &info);
 		if (IS_ERR_OR_NULL(encoder)) {
 			SDE_ERROR("dp encoder init failed %d\n", i);
@@ -2020,7 +1975,7 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 					display,
 					&dp_ops,
 					DRM_CONNECTOR_POLL_HPD,
-					info.intf_type);
+					DRM_MODE_CONNECTOR_DisplayPort);
 		if (connector) {
 			priv->encoders[priv->num_encoders++] = encoder;
 			priv->connectors[priv->num_connectors++] = connector;
@@ -2033,9 +1988,9 @@ static int _sde_kms_setup_displays(struct drm_device *dev,
 		/* update display cap to MST_MODE for DP MST encoders */
 		info.capabilities |= MSM_DISPLAY_CAP_MST_MODE;
 
-		for (idx = 0; idx < dp_info.stream_cnt &&
+		for (idx = 0; idx < sde_kms->dp_stream_count &&
 				priv->num_encoders < max_encoders; idx++) {
-			info.h_tile_instance[0] = dp_info.intf_idx[idx];
+			info.h_tile_instance[0] = idx;
 			encoder = sde_encoder_init(dev, &info);
 			if (IS_ERR_OR_NULL(encoder)) {
 				SDE_ERROR("dp mst encoder init failed %d\n", i);
@@ -3431,7 +3386,6 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 {
 	void *display;
 	struct dsi_display *dsi_display;
-	struct dp_display *dp_display;
 	struct msm_display_info info;
 	struct drm_encoder *encoder = NULL;
 	struct drm_crtc *crtc = NULL;
@@ -3580,57 +3534,6 @@ static int sde_kms_cont_splash_config(struct msm_kms *kms,
 			SDE_ERROR("Failed: updating plane status rc=%d\n", rc);
 			return rc;
 		}
-	}
-
-	/* dp */
-	for (i = 0; i < sde_kms->dp_display_count; ++i) {
-		display = sde_kms->dp_displays[i];
-		dp_display = (struct dp_display *)display;
-
-		if (!dp_display->cont_splash_enabled) {
-			SDE_DEBUG("DP-%d splash not enabled\n", i);
-			continue;
-		}
-
-		if (dp_display->bridge->base.encoder) {
-			encoder = dp_display->bridge->base.encoder;
-			SDE_DEBUG("encoder name = %s\n", encoder->name);
-		} else {
-			SDE_DEBUG("Invalid encoder\n");
-			break;
-		}
-
-		mutex_lock(&dev->mode_config.mutex);
-		drm_connector_list_iter_begin(dev, &conn_iter);
-		drm_for_each_connector_iter(connector, &conn_iter) {
-			/**
-			 * SDE_KMS doesn't attach more than one encoder to
-			 * a DSI connector. So it is safe to check only with
-			 * the first encoder entry. Revisit this logic if we
-			 * ever have to support continuous splash for
-			 * external displays in MST configuration.
-			 */
-			if (connector->encoder_ids[0] == encoder->base.id)
-				break;
-		}
-
-		drm_connector_list_iter_end(&conn_iter);
-		if (!connector) {
-			SDE_ERROR("connector not initialized\n");
-			mutex_unlock(&dev->mode_config.mutex);
-			return -EINVAL;
-		}
-		mutex_unlock(&dev->mode_config.mutex);
-
-		/* Enable all irqs */
-		sde_irq_update(kms, true);
-
-		sde_conn = to_sde_connector(connector);
-		if (sde_conn && sde_conn->ops.cont_splash_config)
-			sde_conn->ops.cont_splash_config(sde_conn->display);
-
-		/* Disable irqs */
-		sde_irq_update(kms, false);
 	}
 
 	return rc;
@@ -4233,9 +4136,6 @@ static const struct msm_kms_funcs kms_funcs = {
 	.trigger_null_flush = sde_kms_trigger_null_flush,
 	.get_mixer_count = sde_kms_get_mixer_count,
 	.get_dsc_count = sde_kms_get_dsc_count,
-#if defined(OPLUS_FEATURE_PXLW_IRIS5) || defined(OPLUS_FEATURE_PXLW_IRISSOFT)
-	.iris_operate = iris_sde_kms_iris_operate,
-#endif
 };
 
 static int _sde_kms_mmu_destroy(struct sde_kms *sde_kms)
@@ -4581,8 +4481,7 @@ static int _sde_kms_get_splash_data(struct sde_kms *sde_kms,
 	 * cont_splash_region  should be collection of all memory regions
 	 * Ex: <r1.start r1.end r2.start r2.end  ... rn.start, rn.end>
 	 */
-	num_displays = dsi_display_get_num_of_displays()
-				+ dp_display_get_num_of_boot_displays();
+	num_displays = dsi_display_get_num_of_displays();
 	num_regions = of_property_count_u64_elems(node, "reg") / 2;
 
 	data->num_splash_displays = num_displays;
