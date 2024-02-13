@@ -480,6 +480,8 @@ void sde_rsc_debug_dump(u32 mux_sel);
 
 static inline void sde_evtlog_log(struct sde_dbg_evtlog *evtlog, const char *name, int line,
 	int flag, ...) { }
+static inline ssize_t oplus_sde_evtlog_dump_read(struct file *file, char __user *buff,
+                size_t count, loff_t *ppos) {  return 0; }
 static inline void sde_reglog_log(u8 blk_id, u32 val, u32 addr) { }
 static inline void sde_dbg_init_dbg_buses(u32 hwversion) { }
 static inline int sde_dbg_init(struct device *dev) { return 0; }
