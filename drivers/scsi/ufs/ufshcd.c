@@ -2011,15 +2011,10 @@ out:
 static void ufshcd_init_clk_scaling(struct ufs_hba *hba)
 {
 	char wq_name[sizeof("ufs_clkscaling_00")];
-
-<<<<<<< HEAD
-	if (ufshcd_is_clkscaling_supported(hba)) {
-=======
 	if (!ufshcd_is_clkscaling_supported(hba)) {
 		ufshcd_clkscaling_init_sysfs(hba, true);
 		return;
 	}
->>>>>>> cac6a0a405be (ufshcd: show bogus clkscale_enable even if it's not supported)
 
 	INIT_WORK(&hba->clk_scaling.suspend_work,
 		  ufshcd_clk_scaling_suspend_work);
@@ -2030,14 +2025,12 @@ static void ufshcd_init_clk_scaling(struct ufs_hba *hba)
 		 hba->host->host_no);
 	hba->clk_scaling.workq = create_singlethread_workqueue(wq_name);
 
-<<<<<<< HEAD
+
 		ufshcd_clkscaling_init_sysfs(hba, false);
 	} else {
 		ufshcd_clkscaling_init_sysfs(hba, true);
 	}
-=======
 	ufshcd_clkscaling_init_sysfs(hba, false);
->>>>>>> cac6a0a405be (ufshcd: show bogus clkscale_enable even if it's not supported)
 }
 
 static void ufshcd_exit_clk_scaling(struct ufs_hba *hba)
