@@ -422,6 +422,7 @@ no_fences:
 	if (copy_to_user((void __user *)arg, &info.status, len))
 		return -EFAULT;
 
+
 	return 0;
 }
 
