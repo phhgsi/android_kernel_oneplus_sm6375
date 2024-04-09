@@ -399,12 +399,6 @@ int ip_tunnel_rcv(struct ip_tunnel *tunnel, struct sk_buff *skb,
 
 	skb_set_network_header(skb, (tunnel->dev->type == ARPHRD_ETHER) ? ETH_HLEN : 0);
 
-	if (!pskb_inet_may_pull(skb)) {
-		DEV_STATS_INC(tunnel->dev, rx_length_errors);
-		DEV_STATS_INC(tunnel->dev, rx_errors);
-		goto drop;
-	}
-	iph = (struct iphdr *)(skb->head + nh);
 
 	err = IP_ECN_decapsulate(iph, skb);
 	if (unlikely(err)) {
