@@ -78,6 +78,7 @@ obj-$(CONFIG_SIM_DETECT)	+= sim_detect.o
 #ifdef OPLUS_FEATURE_SIM_DETECT
 obj-$(CONFIG_OEM_QMI)	+= oem_qmi_client.o
 #endif
+<<<<<<< HEAD
 
 #ifdef OPLUS_FEATURE_RF_CABLE_DETECT
 oplus_bsp_rfcablemonitor-y			:= oplus_rf_cable_monitor.o
@@ -89,3 +90,8 @@ obj-$(CONFIG_OPLUS_RF_CABLE_MONITOR)	+= oplus_bsp_ant_detect.o
 #ifdef OPLUS_FEATURE_TP_BASIC
 obj-$(CONFIG_AW8697_HAPTIC) += aw8697_haptic/
 #endif
+
+obj-y                           += qrc/
+obj-$(CONFIG_KINECTICS_XR_NORDIC) += kxrctrl/
+
+obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o

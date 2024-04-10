@@ -547,6 +547,7 @@ config OEM_QMI
 	  Say Y here to enable oem qmi support
 #endif /* OPLUS_FEATURE_SIM_DETECT */
 
+<<<<<<< HEAD
 #ifdef OPLUS_FEATURE_RF_CABLE_DETECT
 config OPLUS_RF_CABLE_MONITOR
 	tristate "OPLUS rf cable monitor system"
@@ -564,6 +565,13 @@ config AW8697_HAPTIC
 	help
 	This option enables support for aw8697 series Haptic Driver.
 #endif /* OPLUS_FEATURE_LMVIBRATOR */
+
+config FORCE_FAST_CHARGE
+	bool "Force faster charge rate for USB"
+	default y
+	help
+	  This allows users to override default charge rate for USB
+
 
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
