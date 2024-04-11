@@ -78,7 +78,6 @@ obj-$(CONFIG_SIM_DETECT)	+= sim_detect.o
 #ifdef OPLUS_FEATURE_SIM_DETECT
 obj-$(CONFIG_OEM_QMI)	+= oem_qmi_client.o
 #endif
-<<<<<<< HEAD
 
 #ifdef OPLUS_FEATURE_RF_CABLE_DETECT
 oplus_bsp_rfcablemonitor-y			:= oplus_rf_cable_monitor.o
